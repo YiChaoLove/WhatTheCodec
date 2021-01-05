@@ -52,6 +52,8 @@
     <string name="empty_root_description">Open a video or audio file\nto see its details</string>
     <string name="empty_root_choose">Choose</string>
     <string name="empty_root_or">or</string>
+    <string name="empty_root_open_video_from_assets">Open video from assets file</string>
+    <string name="empty_root_open_video_by_pipe">Open video by pipe protocol</string>
     <string name="settings_title">Settings</string>
     <string name="settings_category_general">General</string>
     <string name="settings_category_about">About</string>

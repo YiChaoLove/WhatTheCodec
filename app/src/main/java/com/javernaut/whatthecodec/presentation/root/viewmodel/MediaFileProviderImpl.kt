@@ -35,4 +35,11 @@ class MediaFileProviderImpl(context: Context) : MediaFileProvider {
         return config
     }
 
+    override fun obtainMediaFile(argument: MediaAssetsArgument): MediaFile? =
+            MediaFileBuilder(argument.type).from(argument.assetFileDescriptor, argument.shortFormatName).create()
+
+    override fun obtainMediaFile(argument: MediaPipeArgument): MediaFile? =
+            MediaFileBuilder(argument.type).from(argument.inputStream, argument.shortFormatName).create()
+
+
 }

@@ -21,4 +21,7 @@
  */
 bool frame_extractor_load_frame(JNIEnv *env, int64_t jFrameLoaderContextHandle, int index, jobject jBitmap);
 
+
+bool frame_extractor_load_frames(JNIEnv *env, int64_t jFrameLoaderContextHandle, jobjectArray jBitmaps);
+
 #endif //WHATTHECODEC_FRAME_EXTRACTOR_H

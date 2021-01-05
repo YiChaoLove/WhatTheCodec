@@ -65,7 +65,7 @@ int utils_fields_init(JavaVM *vm) {
     GET_ID(GetMethodID,
            fields.MediaFileBuilder.onMediaFileFoundID,
            fields.MediaFileBuilder.clazz,
-           "onMediaFileFound", "(Ljava/lang/String;)V");
+           "onMediaFileFound", "(Ljava/lang/String;Ljava/lang/String;I)V");
 
     GET_ID(GetMethodID,
            fields.MediaFileBuilder.onVideoStreamFoundID,

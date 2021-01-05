@@ -13,6 +13,11 @@ class FrameLoader(private var frameLoadingContextHandle: Long) {
         return result
     }
 
+    fun loadFramesInto(bitmaps: Array<Bitmap>): Boolean {
+        val result = nativeLoadFrames(frameLoadingContextHandle, bitmaps)
+        return result
+    }
+
     fun release() {
         nativeRelease(frameLoadingContextHandle)
         frameLoadingContextHandle = -1
@@ -26,5 +31,7 @@ class FrameLoader(private var frameLoadingContextHandle: Long) {
 
         @JvmStatic
         private external fun nativeLoadFrame(handle: Long, index: Int, bitmap: Bitmap): Boolean
+
+        private external fun nativeLoadFrames(handle: Long, bitmaps: Array<Bitmap>) : Boolean
     }
 }

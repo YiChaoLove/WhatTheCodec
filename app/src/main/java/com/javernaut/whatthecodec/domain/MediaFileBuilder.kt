@@ -2,7 +2,9 @@ package com.javernaut.whatthecodec.domain
 
 import android.content.res.AssetFileDescriptor
 import android.os.ParcelFileDescriptor
+import android.util.Log
 import androidx.annotation.Keep
+import java.io.InputStream
 
 /**
  * Class that aggregates a creation process of a [MediaFile] object. Certain private methods are
@@ -15,6 +17,9 @@ class MediaFileBuilder(private val mediaType: MediaType) {
     private var parcelFileDescriptor: ParcelFileDescriptor? = null
 
     private var fileFormatName: String? = null
+    private var urlProtocolName: String? = null
+
+    private var pipe: IntArray? = null
 
     private var videoStream: VideoStream? = null
     private var frameLoaderContextHandle: Long? = null
@@ -49,10 +54,44 @@ class MediaFileBuilder(private val mediaType: MediaType) {
     fun from(assetFileDescriptor: AssetFileDescriptor, shortFormatName: String) = apply {
         val descriptor = assetFileDescriptor.parcelFileDescriptor
         this.parcelFileDescriptor = descriptor
-        nativeCreateFromAssetFD(descriptor.fd,
-                assetFileDescriptor.startOffset,
-                shortFormatName,
-                mediaType.mediaStreamsMask)
+        nativeCreateFromFDWithOffset(descriptor.fd, assetFileDescriptor.startOffset, shortFormatName, mediaType.mediaStreamsMask)
+//        nativeCreateFromAssetFD(descriptor.fd,
+//                assetFileDescriptor.startOffset,
+//                shortFormatName,
+//                mediaType.mediaStreamsMask)
+    }
+
+    fun from(inputStream: InputStream, shortFormatName: String) = apply {
+        nativeCreatePipe()?.let { pipe ->
+            this.pipe = pipe
+            PipeWriteThread(pipe[1], inputStream).start()
+            nativeCreateFromPipe(pipe[0], shortFormatName, mediaType.mediaStreamsMask)
+        }
+    }
+
+    inner class PipeWriteThread(val writePipeFD: Int, val inputStream: InputStream) : Thread() {
+        override fun run() {
+            var len = 0
+            val buffer = ByteArray(1024 * 50)
+            try {
+                while (true) {
+                    Log.i("PipeWriteThread", "read buffer")
+                    len = inputStream.read(buffer)
+                    if (len <= 0) {
+                        Log.i("PipeWriteThread", "break. $len")
+                        break
+                    }
+                    Log.i("PipeWriteThread", "write len:$len")
+                    nativeWritePipeData(writePipeFD, buffer, len)
+                }
+
+            } catch (e: Exception) {
+                Log.i("PipeWriteThread", "error")
+                e.printStackTrace()
+            }
+            Log.i("PipeWriteThread", "write over, len:$len")
+            inputStream.close()
+        }
     }
 
     /**
@@ -62,11 +101,18 @@ class MediaFileBuilder(private val mediaType: MediaType) {
     fun create(): MediaFile? {
         return if (!error) {
             MediaFile(fileFormatName!!,
+                    urlProtocolName,
                     videoStream,
                     audioStreams,
                     subtitleStream,
                     parcelFileDescriptor,
-                    frameLoaderContextHandle)
+                    frameLoaderContextHandle
+            ) {
+                pipe?.let {
+                    nativeClosePipe(it[0])
+                    nativeClosePipe(it[1])
+                }
+            }
         } else {
             null
         }
@@ -80,8 +126,10 @@ class MediaFileBuilder(private val mediaType: MediaType) {
 
     @Keep
     /* Used from JNI */
-    private fun onMediaFileFound(fileFormatName: String) {
+    private fun onMediaFileFound(fileFormatName: String, urlProtocolName: String, seekable: Int) {
+//        Log.i("onMediaFileFound", "seekable:$seekable")
         this.fileFormatName = fileFormatName
+        this.urlProtocolName = urlProtocolName
     }
 
     @Keep
@@ -137,12 +185,26 @@ class MediaFileBuilder(private val mediaType: MediaType) {
 
     private external fun nativeCreateFromFD(fileDescriptor: Int, mediaStreamsMask: Int)
 
+    private external fun nativeCreateFromFDWithOffset(fileDescriptor: Int, startOffset: Long, shortFormatName: String, mediaStreamsMask: Int)
+
+    @Deprecated("use nativeCreateFromFDWithOffset")
     private external fun nativeCreateFromAssetFD(assetFileDescriptor: Int,
                                                  startOffset: Long,
                                                  shortFormatName: String,
                                                  mediaStreamsMask: Int)
 
     private external fun nativeCreateFromPath(filePath: String, mediaStreamsMask: Int)
+
+    /**
+     * Pipe protocol
+     */
+    private external fun nativeCreateFromPipe(outputFD: Int, shortFormatName: String, mediaStreamsMask: Int)
+
+    private external fun nativeCreatePipe(): IntArray?
+
+    private external fun nativeWritePipeData(fd: Int, data: ByteArray, size: Int)
+
+    private external fun nativeClosePipe(fd: Int)
 
     init {
         // The order of importing is mandatory, because otherwise the app will crash on Android API 16 and 17.

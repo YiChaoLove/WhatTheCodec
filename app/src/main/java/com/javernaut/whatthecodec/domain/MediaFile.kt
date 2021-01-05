@@ -7,11 +7,13 @@ import android.os.ParcelFileDescriptor
  */
 class MediaFile(
         val fileFormatName: String,
+        val urlProtocolName: String?,
         val videoStream: VideoStream?,
         val audioStreams: List<AudioStream>,
         val subtitleStreams: List<SubtitleStream>,
         private val parcelFileDescriptor: ParcelFileDescriptor?,
-        frameLoaderContextHandle: Long?
+        frameLoaderContextHandle: Long?,
+        private val closePipe: () -> Unit//Only used by pipe protocol
 ) {
 
     val fullFeatured = parcelFileDescriptor == null
@@ -25,5 +27,6 @@ class MediaFile(
         frameLoader?.release()
         frameLoader = null
         parcelFileDescriptor?.close()
+        closePipe()//Only used by pipe protocol
     }
 }

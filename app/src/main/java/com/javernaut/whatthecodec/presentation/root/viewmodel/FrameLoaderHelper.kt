@@ -5,18 +5,8 @@ import android.graphics.Color
 import androidx.palette.graphics.Palette
 import com.javernaut.whatthecodec.domain.FrameLoader
 import com.javernaut.whatthecodec.domain.MediaFile
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.ActualFrame
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.ActualPreview
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.DecodingErrorFrame
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.Frame
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.FrameMetrics
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.LoadingFrame
-import com.javernaut.whatthecodec.presentation.root.viewmodel.model.PlaceholderFrame
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.javernaut.whatthecodec.presentation.root.viewmodel.model.*
+import kotlinx.coroutines.*
 
 class FrameLoaderHelper(
         private val metrics: FrameMetrics,
@@ -30,6 +20,10 @@ class FrameLoaderHelper(
 
     private lateinit var framesLoadingJob: Job
 
+    /**
+     *  Because the pipe protocol does not support seek, all frames are decoded at once.
+     *  Get seekable by MediaFileBuilder's onMediaFileFound callback.
+     */
     fun loadFrames(mediaFile: MediaFile) {
         isWorking = true
 
@@ -45,29 +39,55 @@ class FrameLoaderHelper(
 
             tryApplyPreview(previewApplier, actualPreview)
 
-            for (index in 0 until FrameLoader.TOTAL_FRAMES_TO_LOAD) {
-                if (!isWorking) {
-                    break
+            if (mediaFile.urlProtocolName == "pipe") {
+                for (index in 0 until FrameLoader.TOTAL_FRAMES_TO_LOAD) {
+                    if (!isWorking) {
+                        break
+                    }
+                    // First, marking a cell as 'loading'
+                    frames[index] = LoadingFrame
+                    tryApplyPreview(previewApplier, actualPreview)
                 }
-
-                // First, marking a cell as 'loading'
-                frames[index] = LoadingFrame
-                tryApplyPreview(previewApplier, actualPreview)
-
-                // Loading a frame in a separate dispatcher
+                // Loading all frame in a separate dispatcher
                 val result = withContext(Dispatchers.IO) {
-                    loadSingleFrame(mediaFile, index)
+                    loadAllFrames(mediaFile)
                 }
 
-                // Depending on the actual result, displaying either an actual frame or an error
-                frames[index] = if (result.success) {
-                    ActualFrame(result.frame)
-                } else {
-                    DecodingErrorFrame
+                for ((index, res) in result.withIndex()) {
+                    // Depending on the actual result, displaying either an actual frame or an error
+                    frames[index] = if (res.success) {
+                        ActualFrame(res.frame)
+                    } else {
+                        DecodingErrorFrame
+                    }
+                    tryApplyPreview(previewApplier, actualPreview)
                 }
+            } else {
+                for (index in 0 until FrameLoader.TOTAL_FRAMES_TO_LOAD) {
+                    if (!isWorking) {
+                        break
+                    }
 
-                tryApplyPreview(previewApplier, actualPreview)
+                    // First, marking a cell as 'loading'
+                    frames[index] = LoadingFrame
+                    tryApplyPreview(previewApplier, actualPreview)
+
+                    // Loading a frame in a separate dispatcher
+                    val result = withContext(Dispatchers.IO) {
+                        loadSingleFrame(mediaFile, index)
+                    }
+
+                    // Depending on the actual result, displaying either an actual frame or an error
+                    frames[index] = if (result.success) {
+                        ActualFrame(result.frame)
+                    } else {
+                        DecodingErrorFrame
+                    }
+
+                    tryApplyPreview(previewApplier, actualPreview)
+                }
             }
+
 
             if (isWorking) {
                 // In the end, we compute the background for frames
@@ -115,6 +135,16 @@ class FrameLoaderHelper(
         val successfulLoading = mediaFile.frameLoader?.loadNextFrameInto(frameBitmap) == true
 
         return FrameLoadingResult(frameBitmap, successfulLoading)
+    }
+
+    private fun loadAllFrames(mediaFile: MediaFile) : Array<FrameLoadingResult> {
+        val frameBitmps = Array<Bitmap>(4) {
+            getFrameBitmap(it)
+        }
+        val successfulLoading = mediaFile.frameLoader?.loadFramesInto(frameBitmps) == true
+        return Array<FrameLoadingResult>(4) {
+            FrameLoadingResult(frameBitmps[it], successfulLoading)
+        }
     }
 
     private fun getFrameBitmap(index: Int): Bitmap {

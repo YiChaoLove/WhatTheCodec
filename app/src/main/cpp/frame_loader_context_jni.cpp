@@ -22,3 +22,13 @@ Java_com_javernaut_whatthecodec_domain_FrameLoader_nativeLoadFrame(JNIEnv *env, 
     return static_cast<jboolean>(successfullyLoaded);
 }
 }
+
+extern "C"
+JNIEXPORT jboolean JNICALL
+Java_com_javernaut_whatthecodec_domain_FrameLoader_00024Companion_nativeLoadFrames(JNIEnv *env,
+                                                                                   jobject thiz,
+                                                                                   jlong handle,
+                                                                                   jobjectArray bitmaps) {
+    bool successfullyLoaded = frame_extractor_load_frames(env, handle, bitmaps);
+    return static_cast<jboolean>(successfullyLoaded);
+}

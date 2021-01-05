@@ -13,10 +13,14 @@ extern "C" {
 
 #include <android/bitmap.h>
 #include "frame_loader_context.h"
+#include <android/log.h>
+
+# define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, "frame_extractor", __VA_ARGS__)
 
 static int TOTAL_FRAMES_NUMBER = 4;
 
-bool frame_extractor_load_frame(JNIEnv *env, int64_t jFrameLoaderContextHandle, int index, jobject jBitmap) {
+bool frame_extractor_load_frame(JNIEnv *env, int64_t jFrameLoaderContextHandle, int index,
+                                jobject jBitmap) {
     AndroidBitmapInfo bitmapMetricInfo;
     AndroidBitmap_getInfo(env, jBitmap, &bitmapMetricInfo);
 
@@ -65,10 +69,13 @@ bool frame_extractor_load_frame(JNIEnv *env, int64_t jFrameLoaderContextHandle, 
     AVFrame *frame = av_frame_alloc();
 
     int64_t seekPosition = videoDuration / TOTAL_FRAMES_NUMBER * index + offset;
-    av_seek_frame(videoStream->avFormatContext,
-                  videoStream->videoStreamIndex,
-                  seekPosition,
-                  0);
+    LOGE("videoDuration: %" PRId64 ",  seekPosition: %" PRId64 "", videoDuration, seekPosition);
+    if (av_seek_frame(videoStream->avFormatContext,
+                      videoStream->videoStreamIndex,
+                      seekPosition,
+                      AVSEEK_FLAG_BACKWARD) < 0) {
+        LOGE("av_seek_frame error");
+    }
 
     AVCodecContext *videoCodecContext = avcodec_alloc_context3(videoStream->avVideoCodec);
     avcodec_parameters_to_context(videoCodecContext, videoStream->parameters);
@@ -81,10 +88,12 @@ bool frame_extractor_load_frame(JNIEnv *env, int64_t jFrameLoaderContextHandle, 
             break;
         }
 
+        LOGE("av_read_frame, packet pts: %" PRId64 "", packet->pts);
+
         if (packet->stream_index == videoStream->videoStreamIndex) {
             avcodec_send_packet(videoCodecContext, packet);
             int response = avcodec_receive_frame(videoCodecContext, frame);
-            if (response == AVERROR(EAGAIN)) {
+            if (response == AVERROR(EAGAIN) || frame->pts < seekPosition) {
                 // A frame can be split across several packets, so continue reading in this case
                 continue;
             }
@@ -121,6 +130,133 @@ bool frame_extractor_load_frame(JNIEnv *env, int64_t jFrameLoaderContextHandle, 
             }
         }
         av_packet_unref(packet);
+    }
+
+    av_packet_free(&packet);
+    av_frame_free(&frame);
+    avcodec_free_context(&videoCodecContext);
+
+    sws_freeContext(scalingContext);
+
+    return resultValue;
+}
+
+bool frame_extractor_load_frames(JNIEnv *env, int64_t jFrameLoaderContextHandle, jobjectArray jBitmaps) {
+    int bmpCount = env->GetArrayLength(jBitmaps);
+    int64_t *seekPositions = new int64_t[bmpCount];
+
+    auto *videoStream = frame_loader_context_from_handle(jFrameLoaderContextHandle);
+    auto pixelFormat = static_cast<AVPixelFormat>(videoStream->parameters->format);
+    if (pixelFormat == AV_PIX_FMT_NONE) {
+        // With pipe protocol some files fail to provide pixel format info.
+        // In this case we can't establish neither scaling nor even a frame extracting.
+        return false;
+    }
+
+    bool resultValue = true;
+    SwsContext *scalingContext = nullptr;
+
+    AVStream *avVideoStream = videoStream->
+            avFormatContext->
+            streams[videoStream->videoStreamIndex];
+
+    int64_t videoDuration = avVideoStream->duration;
+
+    // In some cases the duration is of a video stream is set to Long.MIN_VALUE and we need compute it in another way
+    if (videoDuration == LONG_LONG_MIN && avVideoStream->time_base.den != 0) {
+        videoDuration = videoStream->avFormatContext->duration / avVideoStream->time_base.den;
+    }
+
+    // We extract frames right from the middle of a region, so the offset equals to a half of a region
+    int64_t offset = videoDuration / TOTAL_FRAMES_NUMBER / 2;
+
+    AVPacket *packet = av_packet_alloc();
+    AVFrame *frame = av_frame_alloc();
+
+    int i = 0;
+    for (; i < bmpCount; i++) {
+        seekPositions[i] = videoDuration / TOTAL_FRAMES_NUMBER * i + offset;
+    }
+
+    AVCodecContext *videoCodecContext = avcodec_alloc_context3(videoStream->avVideoCodec);
+    avcodec_parameters_to_context(videoCodecContext, videoStream->parameters);
+    avcodec_open2(videoCodecContext, videoStream->avVideoCodec, nullptr);
+
+    i = 0;
+    while (true) {
+        if (av_read_frame(videoStream->avFormatContext, packet) < 0) {
+            // Couldn't read a packet, so we skip the whole frame
+            resultValue = false;
+            break;
+        }
+
+//        LOGE("av_read_frame, packet pts: %" PRId64 "", packet->pts);
+
+        if (packet->stream_index == videoStream->videoStreamIndex) {
+            avcodec_send_packet(videoCodecContext, packet);
+            int response = avcodec_receive_frame(videoCodecContext, frame);
+            if (response == AVERROR(EAGAIN) || frame->pts < seekPositions[i]) {
+                // A frame can be split across several packets, so continue reading in this case
+                continue;
+            }
+
+            if (response >= 0) {
+                AVFrame *frameForDrawing = av_frame_alloc();
+                void *bitmapBuffer;
+
+                jobject jBitmap = env->GetObjectArrayElement(jBitmaps, i);
+                AndroidBitmapInfo bitmapMetricInfo;
+                AndroidBitmap_getInfo(env, jBitmap, &bitmapMetricInfo);
+
+                if (!scalingContext) {
+                    scalingContext = sws_getContext(
+                            // srcW
+                            videoStream->parameters->width,
+                            // srcH
+                            videoStream->parameters->height,
+                            // srcFormat
+                            pixelFormat,
+                            // dstW
+                            bitmapMetricInfo.width,
+                            // dstH
+                            bitmapMetricInfo.height,
+                            // dstFormat
+                            AV_PIX_FMT_RGBA,
+                            SWS_BICUBIC, nullptr, nullptr, nullptr);
+                }
+
+                AndroidBitmap_lockPixels(env, jBitmap, &bitmapBuffer);
+
+                // Prepare a FFmpeg's frame to use Android Bitmap's buffer
+                av_image_fill_arrays(
+                        frameForDrawing->data,
+                        frameForDrawing->linesize,
+                        static_cast<const uint8_t *>(bitmapBuffer),
+                        AV_PIX_FMT_RGBA,
+                        bitmapMetricInfo.width,
+                        bitmapMetricInfo.height,
+                        1);
+
+                // Scale the frame that was read from the media to a frame that wraps Android Bitmap's buffer
+                sws_scale(
+                        scalingContext,
+                        frame->data,
+                        frame->linesize,
+                        0,
+                        videoStream->parameters->height,
+                        frameForDrawing->data,
+                        frameForDrawing->linesize);
+
+                av_frame_free(&frameForDrawing);
+
+                AndroidBitmap_unlockPixels(env, jBitmap);
+            }
+            i++;
+        }
+        av_packet_unref(packet);
+        if (i >= bmpCount) {
+            break;
+        }
     }
 
     av_packet_free(&packet);

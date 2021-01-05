@@ -1,6 +1,7 @@
 package com.javernaut.whatthecodec.presentation.root.ui
 
 import android.content.Intent
+import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import android.os.Bundle
 import android.view.Menu
@@ -14,20 +15,15 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.tabs.TabLayoutMediator
 import com.javernaut.whatthecodec.R
 import com.javernaut.whatthecodec.domain.MediaType
-import com.javernaut.whatthecodec.presentation.root.viewmodel.MediaFileArgument
-import com.javernaut.whatthecodec.presentation.root.viewmodel.MediaFileViewModel
-import com.javernaut.whatthecodec.presentation.root.viewmodel.MediaFileViewModelFactory
+import com.javernaut.whatthecodec.presentation.root.viewmodel.*
 import com.javernaut.whatthecodec.presentation.settings.SettingsActivity
 import com.javernaut.whatthecodec.presentation.video.ui.view.PreviewView
 import com.javernaut.whatthecodec.util.TinyActivityCompat
 import com.javernaut.whatthecodec.util.isVisible
 import com.javernaut.whatthecodec.util.setVisible
-import kotlinx.android.synthetic.main.activity_root.pager
-import kotlinx.android.synthetic.main.activity_root.tabs
-import kotlinx.android.synthetic.main.activity_root.toolbar
-import kotlinx.android.synthetic.main.inline_empty_root.emptyRootPanel
-import kotlinx.android.synthetic.main.inline_empty_root.pickAudio
-import kotlinx.android.synthetic.main.inline_empty_root.pickVideo
+import kotlinx.android.synthetic.main.activity_root.*
+import kotlinx.android.synthetic.main.inline_empty_root.*
+import java.io.InputStream
 
 class RootActivity : AppCompatActivity(R.layout.activity_root) {
 
@@ -51,6 +47,17 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
 
         pickVideo.setOnClickListener { onPickVideoClicked() }
         pickAudio.setOnClickListener { onPickAudioClicked() }
+
+        openVideoFromAsset.setOnClickListener {
+            val assetsFD = resources.assets.openFd("Test_Video_AnimalCrossing.mp4")
+            openMediaFile(assetsFD, MediaType.VIDEO, "mp4")
+        }
+
+        openVideoByPipe.setOnClickListener {
+            //assets, file, byteArray -> inputStream
+            val inputStream = resources.assets.open("Test_Video_AnimalCrossing.mp4")
+            openMediaFile(inputStream, MediaType.VIDEO, "mp4")
+        }
 
         mediaFileViewModel.availableTabsLiveData.observe(this, Observer {
             tabs.visibility = View.VISIBLE
@@ -210,6 +217,14 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
 
     private fun openMediaFile(uri: Uri, mediaType: MediaType) {
         mediaFileViewModel.openMediaFile(MediaFileArgument(uri.toString(), mediaType))
+    }
+
+    private fun openMediaFile(assetFileDescriptor: AssetFileDescriptor, mediaType: MediaType, shortFormatName: String) {
+        mediaFileViewModel.openMediaFile(MediaAssetsArgument(assetFileDescriptor, mediaType, shortFormatName))
+    }
+
+    private fun openMediaFile(inputStream: InputStream, mediaType: MediaType, shortFormatName: String) {
+        mediaFileViewModel.openMediaFile(MediaPipeArgument(inputStream, mediaType, shortFormatName))
     }
 
     private fun toast(msg: Int) {

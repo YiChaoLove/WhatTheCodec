@@ -57,4 +57,25 @@
 
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/openVideoFromAsset"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:text="@string/empty_root_open_video_from_assets"
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+        android:textColor="#33b5e5"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/openVideoByPipe"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:text="@string/empty_root_open_video_by_pipe"
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
+        android:textColor="#33b5e5"
+        android:textSize="14sp" />
+
+
 </LinearLayout>

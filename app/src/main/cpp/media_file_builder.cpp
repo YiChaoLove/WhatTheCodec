@@ -47,6 +47,10 @@ static jobject createBasicStreamInfo(jobject jMediaFileBuilder,
     auto codecDescriptor = avcodec_descriptor_get(parameters->codec_id);
     jstring jCodecName = utils_get_env()->NewStringUTF(codecDescriptor->long_name);
 
+    if (!jCodecName) {
+        jCodecName = utils_get_env()->NewStringUTF(codecDescriptor->name);
+    }
+
     return utils_call_instance_method_result(jMediaFileBuilder,
                                              fields.MediaFileBuilder.createBasicInfoID,
                                              index,
@@ -61,14 +65,17 @@ static void onError(jobject jMediaFileBuilder) {
                                     fields.MediaFileBuilder.onErrorID);
 }
 
-static void onMediaFileFound(jobject jMediaFileBuilder, AVFormatContext *avFormatContext) {
+static void onMediaFileFound(jobject jMediaFileBuilder, AVFormatContext *avFormatContext, const char * protocolName, int seekable) {
     const char *fileFormatName = avFormatContext->iformat->long_name;
 
     jstring jFileFormatName = utils_get_env()->NewStringUTF(fileFormatName);
+    jstring jProtocolName = utils_get_env()->NewStringUTF(protocolName);
 
     utils_call_instance_method_void(jMediaFileBuilder,
                                     fields.MediaFileBuilder.onMediaFileFoundID,
-                                    jFileFormatName);
+                                    jFileFormatName,
+                                    jProtocolName,
+                                    seekable);
 }
 
 static void onVideoStreamFound(jobject jMediaFileBuilder,
@@ -156,7 +163,8 @@ static void media_file_build(jobject jMediaFileBuilder, const char *uri, int med
         return;
     };
 
-    onMediaFileFound(jMediaFileBuilder, avFormatContext);
+    const char* protocolName = avio_find_protocol_name(uri);
+    onMediaFileFound(jMediaFileBuilder, avFormatContext, protocolName, avFormatContext->pb->seekable);
 
     for (int pos = 0; pos < avFormatContext->nb_streams; pos++) {
         AVCodecParameters *parameters = avFormatContext->streams[pos]->codecpar;
@@ -202,3 +210,28 @@ void media_file_build(jobject jMediaFileBuilder, int assetFileDescriptor, int64_
 
     media_file_build(jMediaFileBuilder, str, mediaStreamsMask, predefinedContext);
 }
+
+void media_file_build_by_fd(jobject jMediaFileBuilder, int fileDescriptor, int64_t startOffset,  const char *shortFormatName, int mediaStreamsMask){
+    char str[32];
+    sprintf(str, "/proc/self/fd/%d", fileDescriptor);
+    AVFormatContext *predefinedContext = nullptr;
+    if (shortFormatName) {
+        predefinedContext = avformat_alloc_context();
+        predefinedContext->skip_initial_bytes = startOffset;
+        predefinedContext->iformat = av_find_input_format(shortFormatName);
+    }
+    media_file_build(jMediaFileBuilder, str, mediaStreamsMask, predefinedContext);
+}
+
+void media_file_build_by_pipe(jobject jMediaFileBuilder, int outputFD, const char *shortFormatName, int mediaStreamsMask) {
+    char str[32];
+    sprintf(str, "pipe:%d", outputFD);
+    AVFormatContext *predefinedContext = nullptr;
+    if (shortFormatName) {
+        predefinedContext = avformat_alloc_context();
+        predefinedContext->iformat = av_find_input_format(shortFormatName);
+    }
+    media_file_build(jMediaFileBuilder, str, mediaStreamsMask, predefinedContext);
+}
+
+

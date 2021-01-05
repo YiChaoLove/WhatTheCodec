@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.4.1)
 
-set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg-android-maker/output)
-set(ffmpeg_libs ${ffmpeg_dir}/lib/${ANDROID_ABI})
+set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../FFmpegForAndroidAssetFileDescriptor/android)
+set(ffmpeg_libs ${ffmpeg_dir}/${ANDROID_ABI}/lib)
 
-include_directories(${ffmpeg_dir}/include/${ANDROID_ABI})
+include_directories(${ffmpeg_dir}/${ANDROID_ABI}/include)
 
 set(
         # List variable name
