@@ -28,4 +28,4 @@ sudo ./ffmpeg_build_android.sh
 ```
 2. Run `app`
 
- <img src="images/screens/device-2021-01-06-111010.png" witdh=300>
+ <img src="images/screens/device-2021-01-06-111010.png" witdh="300">
