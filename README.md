@@ -15,7 +15,7 @@ Forked from [What the Codec](https://github.com/Javernaut/WhatTheCodec)
 * Fix `loadNextFrameInto(bitmap: Bitmap)` when the video contains B/P frames.
 
 ## Run
-1. Add dependency
+1. Add ffmpeg
 ```
 git submodule update --init
 
@@ -27,3 +27,5 @@ sudo ./ffmpeg_build_android.sh
 
 ```
 2. Run `app`
+
+ <img src="images/screens/device-2021-01-06-111010.png" witdh=300>
