@@ -6,4 +6,4 @@ import com.javernaut.whatthecodec.domain.MediaType
 /**
  * Created by YICHAO on 2021/1/5.
  */
-class MediaAssetsArgument(val assetFileDescriptor: AssetFileDescriptor, val type: MediaType, val shortFormatName: String)
+class MediaAssetsArgument(val assetFileDescriptor: AssetFileDescriptor, val type: MediaType, val shortFormatName: String?)

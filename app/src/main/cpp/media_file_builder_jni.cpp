@@ -11,39 +11,22 @@
 
 extern "C" {
 JNIEXPORT void JNICALL
-Java_com_javernaut_whatthecodec_domain_MediaFileBuilder_nativeCreateFromFD(JNIEnv *,
-                                                                           jobject instance,
-                                                                           jint fileDescriptor,
-                                                                           jint mediaStreamsMask) {
-    media_file_build_by_fd(instance, fileDescriptor, 0, nullptr, mediaStreamsMask);
-}
-
-JNIEXPORT void JNICALL
 Java_com_javernaut_whatthecodec_domain_MediaFileBuilder_nativeCreateFromFDWithOffset(JNIEnv *env,
                                                                                      jobject instance,
                                                                                      jint fileDescriptor,
                                                                                      jlong startOffset,
                                                                                      jstring jShortFormatName,
                                                                                      jint mediaStreamsMask) {
-    const char *cShortFormatName = env->GetStringUTFChars(jShortFormatName, nullptr);
-    media_file_build_by_fd(instance, fileDescriptor, startOffset, cShortFormatName,
-                           mediaStreamsMask);
-    env->ReleaseStringUTFChars(jShortFormatName, cShortFormatName);
-}
+    if (jShortFormatName) {
+        const char *cShortFormatName = env->GetStringUTFChars(jShortFormatName, nullptr);
+        media_file_build_by_fd(instance, fileDescriptor, startOffset, cShortFormatName,
+                               mediaStreamsMask);
+        env->ReleaseStringUTFChars(jShortFormatName, cShortFormatName);
+    } else {
+        media_file_build_by_fd(instance, fileDescriptor, startOffset, nullptr,
+                               mediaStreamsMask);
+    }
 
-JNIEXPORT void JNICALL
-Java_com_javernaut_whatthecodec_domain_MediaFileBuilder_nativeCreateFromAssetFD(JNIEnv *env,
-                                                                                jobject instance,
-                                                                                jint assetFileDescriptor,
-                                                                                jlong startOffset,
-                                                                                jstring jShortFormatName,
-                                                                                jint mediaStreamsMask) {
-    const char *cShortFormatName = env->GetStringUTFChars(jShortFormatName, nullptr);
-
-    media_file_build_by_fd(instance, assetFileDescriptor, startOffset, cShortFormatName,
-                     mediaStreamsMask);
-
-    env->ReleaseStringUTFChars(jShortFormatName, cShortFormatName);
 }
 
 JNIEXPORT void JNICALL
@@ -67,11 +50,13 @@ Java_com_javernaut_whatthecodec_domain_MediaFileBuilder_nativeCreateFromPipe(JNI
                                                                              jint output_fd,
                                                                              jstring short_format_name,
                                                                              jint media_streams_mask) {
-    const char *cShortFormatName = env->GetStringUTFChars(short_format_name, nullptr);
-
-    media_file_build_by_pipe(thiz, output_fd, cShortFormatName, media_streams_mask);
-
-    env->ReleaseStringUTFChars(short_format_name, cShortFormatName);
+    if (short_format_name) {
+        const char *cShortFormatName = env->GetStringUTFChars(short_format_name, nullptr);
+        media_file_build_by_pipe(thiz, output_fd, cShortFormatName, media_streams_mask);
+        env->ReleaseStringUTFChars(short_format_name, cShortFormatName);
+    } else {
+        media_file_build_by_pipe(thiz, output_fd, nullptr, media_streams_mask);
+    }
 }
 
 extern "C"

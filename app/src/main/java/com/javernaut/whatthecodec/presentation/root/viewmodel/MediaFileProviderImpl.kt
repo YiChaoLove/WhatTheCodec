@@ -25,7 +25,7 @@ class MediaFileProviderImpl(context: Context) : MediaFileProvider {
             try {
                 val descriptor = appContext.contentResolver.openFileDescriptor(androidUri, "r")
                 if (descriptor != null) {
-                    config = MediaFileBuilder(argument.type).from(descriptor).create()
+                    config = MediaFileBuilder(argument.type).from(descriptor, 0, null).create()
                 }
             } catch (e: FileNotFoundException) {
                 e.printStackTrace()
@@ -40,6 +40,9 @@ class MediaFileProviderImpl(context: Context) : MediaFileProvider {
 
     override fun obtainMediaFile(argument: MediaPipeArgument): MediaFile? =
             MediaFileBuilder(argument.type).from(argument.inputStream, argument.shortFormatName).create()
+
+    override fun obtainMediaFile(argument: MediaFileDescriptorArgument): MediaFile? =
+            MediaFileBuilder(argument.type).from(argument.parcelFileDescriptor, argument.offset, argument.shortFormatName).create()
 
 
 }

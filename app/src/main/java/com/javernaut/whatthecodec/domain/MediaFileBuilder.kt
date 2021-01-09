@@ -37,9 +37,9 @@ class MediaFileBuilder(private val mediaType: MediaType) {
      * Tries reading all metadata for a [MediaFile] object from a file descriptor. The file descriptor is saved and
      * closed when [MediaFile.release] method is called.
      */
-    fun from(descriptor: ParcelFileDescriptor) = apply {
+    fun from(descriptor: ParcelFileDescriptor, startOffset: Long, shortFormatName: String?) = apply {
         this.parcelFileDescriptor = descriptor
-        nativeCreateFromFD(descriptor.fd, mediaType.mediaStreamsMask)
+        nativeCreateFromFDWithOffset(descriptor.fd, startOffset, shortFormatName, mediaType.mediaStreamsMask)
     }
 
     /**
@@ -51,7 +51,7 @@ class MediaFileBuilder(private val mediaType: MediaType) {
      * If a file comes from assets catalog, then its format should be known to a developer.
      * All default formats are listed here: https://ffmpeg.org/ffmpeg-formats.html
      */
-    fun from(assetFileDescriptor: AssetFileDescriptor, shortFormatName: String) = apply {
+    fun from(assetFileDescriptor: AssetFileDescriptor, shortFormatName: String?) = apply {
         val descriptor = assetFileDescriptor.parcelFileDescriptor
         this.parcelFileDescriptor = descriptor
         nativeCreateFromFDWithOffset(descriptor.fd, assetFileDescriptor.startOffset, shortFormatName, mediaType.mediaStreamsMask)
@@ -61,7 +61,7 @@ class MediaFileBuilder(private val mediaType: MediaType) {
 //                mediaType.mediaStreamsMask)
     }
 
-    fun from(inputStream: InputStream, shortFormatName: String) = apply {
+    fun from(inputStream: InputStream, shortFormatName: String?) = apply {
         nativeCreatePipe()?.let { pipe ->
             this.pipe = pipe
             PipeWriteThread(pipe[1], inputStream).start()
@@ -183,22 +183,17 @@ class MediaFileBuilder(private val mediaType: MediaType) {
                                 disposition: Int) =
             BasicStreamInfo(index, title, codecName, language, disposition)
 
-    private external fun nativeCreateFromFD(fileDescriptor: Int, mediaStreamsMask: Int)
-
-    private external fun nativeCreateFromFDWithOffset(fileDescriptor: Int, startOffset: Long, shortFormatName: String, mediaStreamsMask: Int)
-
-    @Deprecated("use nativeCreateFromFDWithOffset")
-    private external fun nativeCreateFromAssetFD(assetFileDescriptor: Int,
-                                                 startOffset: Long,
-                                                 shortFormatName: String,
-                                                 mediaStreamsMask: Int)
+    private external fun nativeCreateFromFDWithOffset(fileDescriptor: Int,
+                                                      startOffset: Long,
+                                                      shortFormatName: String?,
+                                                      mediaStreamsMask: Int)
 
     private external fun nativeCreateFromPath(filePath: String, mediaStreamsMask: Int)
 
     /**
      * Pipe protocol
      */
-    private external fun nativeCreateFromPipe(outputFD: Int, shortFormatName: String, mediaStreamsMask: Int)
+    private external fun nativeCreateFromPipe(outputFD: Int, shortFormatName: String?, mediaStreamsMask: Int)
 
     private external fun nativeCreatePipe(): IntArray?
 

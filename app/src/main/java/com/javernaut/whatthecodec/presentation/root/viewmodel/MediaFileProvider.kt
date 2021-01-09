@@ -8,4 +8,6 @@ interface MediaFileProvider {
     fun obtainMediaFile(argument: MediaAssetsArgument): MediaFile?
 
     fun obtainMediaFile(argument: MediaPipeArgument): MediaFile?
+
+    fun obtainMediaFile(argument: MediaFileDescriptorArgument): MediaFile?
 }

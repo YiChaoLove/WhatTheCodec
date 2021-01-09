@@ -4,6 +4,7 @@ import android.content.Intent
 import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import android.os.Bundle
+import android.os.ParcelFileDescriptor
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -54,10 +55,16 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
         }
 
         openVideoByPipe.setOnClickListener {
-            //assets, file, byteArray -> inputStream
+            //assets, file or byteArray -> inputStream
             val inputStream = resources.assets.open("Test_Video_AnimalCrossing.mp4")
             openMediaFile(inputStream, MediaType.VIDEO, "mp4")
+
+            //normal fd, need read permission.
+//            val fd = ParcelFileDescriptor.open(File("/sdcard/Test_Video_AnimalCrossing.mp4"), ParcelFileDescriptor.MODE_READ_ONLY)
+//            openMediaFile(fd, 0,  MediaType.VIDEO, null)
         }
+
+
 
         mediaFileViewModel.availableTabsLiveData.observe(this, Observer {
             tabs.visibility = View.VISIBLE
@@ -219,12 +226,16 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
         mediaFileViewModel.openMediaFile(MediaFileArgument(uri.toString(), mediaType))
     }
 
-    private fun openMediaFile(assetFileDescriptor: AssetFileDescriptor, mediaType: MediaType, shortFormatName: String) {
+    private fun openMediaFile(assetFileDescriptor: AssetFileDescriptor, mediaType: MediaType, shortFormatName: String?) {
         mediaFileViewModel.openMediaFile(MediaAssetsArgument(assetFileDescriptor, mediaType, shortFormatName))
     }
 
-    private fun openMediaFile(inputStream: InputStream, mediaType: MediaType, shortFormatName: String) {
+    private fun openMediaFile(inputStream: InputStream, mediaType: MediaType, shortFormatName: String?) {
         mediaFileViewModel.openMediaFile(MediaPipeArgument(inputStream, mediaType, shortFormatName))
+    }
+
+    private fun openMediaFile(parcelFileDescriptor: ParcelFileDescriptor, startOffset: Long, mediaType: MediaType, shortFormatName: String?) {
+        mediaFileViewModel.openMediaFileDescriptor(MediaFileDescriptorArgument(parcelFileDescriptor, startOffset, mediaType, shortFormatName))
     }
 
     private fun toast(msg: Int) {

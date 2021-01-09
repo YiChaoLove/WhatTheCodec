@@ -127,6 +127,20 @@ class MediaFileViewModel(private val desiredFrameWidth: Int,
         }
     }
 
+    fun openMediaFileDescriptor(argument: MediaFileDescriptorArgument) {
+        clearPendingUri()
+        val newMediaFile = mediaFileProvider.obtainMediaFile(argument)
+        if (newMediaFile != null) {
+//            savedStateHandle.set(KEY_MEDIA_FILE_ARGUMENT, argument)
+            releasePreviousMediaFileAndFrameLoader(newMediaFile)
+
+            mediaFile = newMediaFile
+            applyMediaFile(newMediaFile)
+        } else {
+            _errorMessageLiveEvent.value = true
+        }
+    }
+
     private fun applyMediaFile(mediaFile: MediaFile) {
         _basicVideoInfoLiveData.value = mediaFile.toBasicInfo()
         frameMetrics = computeFrameMetrics()

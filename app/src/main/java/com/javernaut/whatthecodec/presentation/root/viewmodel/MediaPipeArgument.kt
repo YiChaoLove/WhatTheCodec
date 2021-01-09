@@ -6,4 +6,4 @@ import java.io.InputStream
 /**
  * Created by YICHAO on 2021/1/5.
  */
-class MediaPipeArgument(val inputStream: InputStream, val type: MediaType, val shortFormatName: String)
+class MediaPipeArgument(val inputStream: InputStream, val type: MediaType, val shortFormatName: String?)

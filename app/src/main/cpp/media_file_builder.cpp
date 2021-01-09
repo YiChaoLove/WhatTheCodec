@@ -11,6 +11,10 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/bprint.h>
 }
+#include <android/log.h>
+
+# define LOGE(...)  __android_log_print(ANDROID_LOG_ERROR, "moxie-video-X264SyncDecoder", __VA_ARGS__)
+
 
 static jstring toJString(const char *cString) {
     jstring result = nullptr;
@@ -151,8 +155,19 @@ static int STREAM_VIDEO = 1;
 static int STREAM_AUDIO = 1 << 1;
 static int STREAM_SUBTITLE = 1 << 2;
 
+static void ffp_log_callback_brief(void *ptr, int level, const char *fmt, va_list vl)
+{
+    char buf[4096];
+    vsnprintf(buf, sizeof(buf), fmt, vl);
+    LOGE("[FFMPEG]--:%s", buf);
+}
+
 static void media_file_build(jobject jMediaFileBuilder, const char *uri, int mediaStreamsMask, AVFormatContext *avFormatContext) {
-    if (avformat_open_input(&avFormatContext, uri, nullptr, nullptr)) {
+    int ret = 0;
+    av_log_set_level(AV_LOG_ERROR);
+    av_log_set_callback(ffp_log_callback_brief);
+    if ((ret = avformat_open_input(&avFormatContext, uri, nullptr, nullptr)) < 0) {
+        av_log(avFormatContext, AV_LOG_ERROR, "avformat_open_input error, %s:", av_err2str(ret));
         onError(jMediaFileBuilder);
         return;
     }
@@ -206,8 +221,9 @@ void media_file_build(jobject jMediaFileBuilder, int assetFileDescriptor, int64_
 
     AVFormatContext *predefinedContext = avformat_alloc_context();
     predefinedContext->skip_initial_bytes = startOffset;
-    predefinedContext->iformat = av_find_input_format(shortFormatName);
-
+    if (shortFormatName) {
+        predefinedContext->iformat = av_find_input_format(shortFormatName);
+    }
     media_file_build(jMediaFileBuilder, str, mediaStreamsMask, predefinedContext);
 }
 
@@ -215,9 +231,9 @@ void media_file_build_by_fd(jobject jMediaFileBuilder, int fileDescriptor, int64
     char str[32];
     sprintf(str, "/proc/self/fd/%d", fileDescriptor);
     AVFormatContext *predefinedContext = nullptr;
+    predefinedContext = avformat_alloc_context();
+    predefinedContext->skip_initial_bytes = startOffset;
     if (shortFormatName) {
-        predefinedContext = avformat_alloc_context();
-        predefinedContext->skip_initial_bytes = startOffset;
         predefinedContext->iformat = av_find_input_format(shortFormatName);
     }
     media_file_build(jMediaFileBuilder, str, mediaStreamsMask, predefinedContext);
