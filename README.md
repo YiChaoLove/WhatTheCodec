@@ -2,30 +2,25 @@
 
 Forked from [What the Codec](https://github.com/Javernaut/WhatTheCodec)
 
-## Change
-* Use AssetFileDescriptor with ffmpeg in Android, fix the problem that `mov.c` cannot handle `skip_initial_bytes` correctly
-    1. Refer to [FFmpegForAndroidAssetFileDescriptor](https://github.com/YiChaoLove/FFmpegForAndroidAssetFileDescriptor)
+当前分支为测试分支，主要用于测试FFmpeg在读取带有startOffset的mov格式的媒体文件时是否能够正常的解码
 
-* Use pipe protocol with ffmpeg in Android
-    1. When using the pipe protocol, we need to create a thread to write data to the pipe, because the pipe buffer has a size limit. According to the Linux system, we can know that the pipe size is 16 physical pages, and each physical page is 4KB. So We need to create a separate thread to write data to the pipe.
-    2. When demuxing an mp4 file, ffmpeg will first search for the `moov` atom. If the `moov` atom is at the end of the video file, the problem of demuxing failure may occur. You can use the `faststart` to move the `moov`  to the head of the video file.
-    ```c
-    ffmpeg -i video.mp4 -c copy -movflags +faststart output.mp4
-    ```
-* Fix `loadNextFrameInto(bitmap: Bitmap)` when the video contains B/P frames.
-
-## Run
-1. Add ffmpeg
+### 测试
+工程中已经自带编译好的so库：
 ```
-git submodule update --init
-
-cd FFmpegForAndroidAssetFileDescriptor
-
-chmod u+x ffmpeg_build_android.sh
-
-sudo ./ffmpeg_build_android.sh
-
+ffmpeg4_3_1 目录下为正常未经修改的代码所编译的so库
+ffmpeg_for_android_asset_fd 目录下为按照FFmpegForAndroidAssetFileDescriptor修改过的代码所编译的so库
 ```
-2. Run `app`
+##### 测试正常so库是否能够正确处理`skip_initial_bytes`
 
- <img src="images/screens/device-2021-01-06-111010.png" width="300">
+修改`CMakeLists.txt`文件后运行
+```
+#set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg_for_android_asset_fd/android)
+set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg4_3_1/android)
+```
+##### 测试经由FFmpegForAndroidAssetFileDescriptor修改是否可以正常处理`skip_initial_bytes`
+
+修改`CMakeLists.txt`文件后运行
+```
+set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg_for_android_asset_fd/android)
+#set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg4_3_1/android)
+```
