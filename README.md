@@ -12,15 +12,19 @@ ffmpeg_for_android_asset_fd 目录下为按照FFmpegForAndroidAssetFileDescripto
 ```
 ##### 测试正常so库是否能够正确处理`skip_initial_bytes`
 
-修改`CMakeLists.txt`文件后运行
+修改`CMakeLists.txt`文件后运行app
 ```
+app/CMakeLists.txt
+
 #set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg_for_android_asset_fd/android)
 set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg4_3_1/android)
 ```
 ##### 测试经由FFmpegForAndroidAssetFileDescriptor修改是否可以正常处理`skip_initial_bytes`
 
-修改`CMakeLists.txt`文件后运行
+修改`CMakeLists.txt`文件后运行app
 ```
+app/CMakeLists.txt
+
 set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg_for_android_asset_fd/android)
 #set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg4_3_1/android)
 ```
