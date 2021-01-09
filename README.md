@@ -2,7 +2,7 @@
 
 Forked from [What the Codec](https://github.com/Javernaut/WhatTheCodec)
 
-当前分支为测试分支，主要用于测试FFmpeg对带有startOffset的mov格式的媒体文件不能正常读取的问题
+当前分支为测试分支，主要用于测试FFmpeg对带有startOffset的媒体文件（mov格式）不能正常读取的问题
 
 ### 测试
 工程中已经自带编译好的so库：
