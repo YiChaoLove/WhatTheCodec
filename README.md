@@ -6,7 +6,7 @@ Foke自[What the Codec](https://github.com/Javernaut/WhatTheCodec)
 
 ## 修改点
 
-* 修复了"FFmpeg在对带有startOffset的mov格式的媒体文件时不能正常读取的问题"
+* 修复了"FFmpeg对带有startOffset的mov格式的媒体文件不能正常读取"的问题
 
   * 详细见： [FFmpegForAndroidAssetFileDescriptor](https://github.com/YiChaoLove/FFmpegForAndroidAssetFileDescriptor)
 
