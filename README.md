@@ -42,7 +42,7 @@ Foke自[What the Codec](https://github.com/Javernaut/WhatTheCodec)
 
 ## 其他问题
 
-* 如果你想要将其移植到你的工程，你应该着重关注`media_file_builder_jni.cpp`和`MediaFileBuilder.kt`即可
+* 如果你想要将其移植到你的工程，你应该着重关注`media_file_builder_jni.cpp`和`MediaFileBuilder.kt`
 
 * 这只是一个Demo工程，项目中有诸多不当之处，如果你想要将其用于生产环境需要注意以下几个问题
 
