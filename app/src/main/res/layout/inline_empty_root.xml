@@ -58,21 +58,21 @@
     </LinearLayout>
 
     <TextView
-        android:id="@+id/openVideoFromAsset"
+        android:id="@+id/openVideo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:text="@string/empty_root_open_video_from_assets"
+        android:text="打开不带有offset的本地视频文件"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
         android:textColor="#33b5e5"
         android:textSize="14sp" />
 
     <TextView
-        android:id="@+id/openVideoByPipe"
+        android:id="@+id/openOffsetVideo"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="10dp"
-        android:text="@string/empty_root_open_video_by_pipe"
+        android:text="打开带有offset的本地视频文件"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Body1"
         android:textColor="#33b5e5"
         android:textSize="14sp" />

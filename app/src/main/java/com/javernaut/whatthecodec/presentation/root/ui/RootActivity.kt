@@ -1,10 +1,12 @@
 package com.javernaut.whatthecodec.presentation.root.ui
 
+import android.content.Context
 import android.content.Intent
 import android.content.res.AssetFileDescriptor
 import android.net.Uri
 import android.os.Bundle
 import android.os.ParcelFileDescriptor
+import android.text.TextUtils
 import android.view.Menu
 import android.view.MenuItem
 import android.view.View
@@ -24,7 +26,7 @@ import com.javernaut.whatthecodec.util.isVisible
 import com.javernaut.whatthecodec.util.setVisible
 import kotlinx.android.synthetic.main.activity_root.*
 import kotlinx.android.synthetic.main.inline_empty_root.*
-import java.io.InputStream
+import java.io.*
 
 class RootActivity : AppCompatActivity(R.layout.activity_root) {
 
@@ -38,6 +40,10 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
 
     private lateinit var pagerAdapter: RootPagerAdapter
 
+    fun getTestDir(): File? {
+        return File(filesDir, "test")
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setSupportActionBar(toolbar)
@@ -49,22 +55,33 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
         pickVideo.setOnClickListener { onPickVideoClicked() }
         pickAudio.setOnClickListener { onPickAudioClicked() }
 
-        openVideoFromAsset.setOnClickListener {
-            val assetsFD = resources.assets.openFd("Test_Video_AnimalCrossing.mp4")
-            openMediaFile(assetsFD, MediaType.VIDEO, "mp4")
+        //拷贝测试数据
+        val testDir = File(filesDir, "test")
+        if (!testDir.exists()) {
+            testDir.mkdir()
+        }
+        val testVideo1 = "Test_Video_AnimalCrossing.mp4"
+        val testVideo1File = File(testDir, testVideo1)
+        if (!testVideo1File.exists()) {
+            copyAssets(this@RootActivity, testVideo1, testVideo1File)
+        }
+        val testVideo2 = "Test_Video_AnimalCrossing_with_offset.mp4"
+        val testVideo2File = File(testDir, testVideo2)
+        if (!testVideo2File.exists()) {
+            copyAssets(this@RootActivity, testVideo2, testVideo2File)
         }
 
-        openVideoByPipe.setOnClickListener {
-            //assets, file or byteArray -> inputStream
-            val inputStream = resources.assets.open("Test_Video_AnimalCrossing.mp4")
-            openMediaFile(inputStream, MediaType.VIDEO, "mp4")
-
-            //normal fd, need read permission.
-//            val fd = ParcelFileDescriptor.open(File("/sdcard/Test_Video_AnimalCrossing.mp4"), ParcelFileDescriptor.MODE_READ_ONLY)
-//            openMediaFile(fd, 0,  MediaType.VIDEO, null)
+        //正常视频文件
+        openVideo.setOnClickListener {
+            val fd = ParcelFileDescriptor.open(testVideo1File, ParcelFileDescriptor.MODE_READ_ONLY)
+            openMediaFile(fd, 0, MediaType.VIDEO, null)
         }
 
-
+        //视频文件的前3个字节为无效数据
+        openOffsetVideo.setOnClickListener {
+            val fd = ParcelFileDescriptor.open(testVideo2File, ParcelFileDescriptor.MODE_READ_ONLY)
+            openMediaFile(fd, 3, MediaType.VIDEO, "mp4")
+        }
 
         mediaFileViewModel.availableTabsLiveData.observe(this, Observer {
             tabs.visibility = View.VISIBLE
@@ -253,5 +270,42 @@ class RootActivity : AppCompatActivity(R.layout.activity_root) {
 
         private const val MIME_TYPE_VIDEO = "video/*"
         private const val MIME_TYPE_AUDIO = "audio/*"
+    }
+
+
+    /**
+     * for test
+     */
+    fun copyAssets(context: Context, fileName: String?, destFile: File?): Boolean {
+        return if (!TextUtils.isEmpty(fileName) && destFile != null) {
+            var isSuccess = false
+            val assetManager = context.assets
+            var inputStream: InputStream? = null
+            var outputStream: FileOutputStream? = null
+            try {
+                inputStream = assetManager.open(fileName!!)
+                outputStream = FileOutputStream(destFile)
+                copyFile(inputStream!!, outputStream!!)
+                isSuccess = true
+            } catch (e: IOException) {
+            } finally {
+                try {
+                    inputStream?.close()
+                    outputStream?.close()
+                } catch (e: IOException) {
+                }
+            }
+            isSuccess
+        } else {
+            false
+        }
+    }
+
+    fun copyFile(`in`: InputStream, out: OutputStream) {
+        val buffer = ByteArray(1024)
+        var read: Int
+        while (`in`.read(buffer).also { read = it } != -1) {
+            out.write(buffer, 0, read)
+        }
     }
 }

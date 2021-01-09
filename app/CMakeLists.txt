@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.4.1)
+#已经编译好的FFmpegForAndroidAssetFileDescriptor so库
+#set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg_for_android_asset_fd/android)
+#没有任何修改的ffmpeg编译 so库
+set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../ffmpeg4_3_1/android)
 
-set(ffmpeg_dir ${CMAKE_SOURCE_DIR}/../FFmpegForAndroidAssetFileDescriptor/android)
+
 set(ffmpeg_libs ${ffmpeg_dir}/${ANDROID_ABI}/lib)
 
 include_directories(${ffmpeg_dir}/${ANDROID_ABI}/include)
